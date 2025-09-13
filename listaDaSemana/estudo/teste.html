@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SPA — Tarefas & Treinos</title>
+  <style>
+    :root{
+      --bg:#08090b;
+      --panel:#0f1720;
+      --muted:#9aa3b2;
+      --accent:#3b82f6; /* azul */
+      --accent-strong:#2563eb;
+      --danger:#ef4444;
+      --card:#0b1220;
+      --glass: rgba(255,255,255,0.03);
+      --radius:12px;
+      --gap:12px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color-scheme: dark;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#050608);color:#E6EEF6}
+    .wrap{max-width:960px;margin:36px auto;padding:20px}
+
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+
+    /* Tab buttons */
+    .tabs{display:flex;gap:8px}
+    .tab-btn{appearance:none;border:0;background:transparent;padding:8px 14px;border-radius:10px;color:var(--muted);cursor:pointer;font-weight:600}
+    .tab-btn[aria-selected="true"]{background:linear-gradient(90deg, rgba(59,130,246,0.12), rgba(37,99,235,0.06));color:var(--accent);box-shadow:0 6px 18px rgba(3,7,18,0.4)}
+
+    main{background:var(--panel);padding:18px;border-radius:16px;box-shadow:0 8px 30px rgba(2,6,12,0.6)}
+
+    .tab-panel{display:none}
+    .tab-panel[data-active="true"]{display:block}
+
+    form{display:flex;gap:8px;margin-bottom:12px}
+    input[type=text]{flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:var(--card);color:inherit}
+    button{padding:10px 12px;border-radius:10px;border:0;background:var(--accent);color:white;cursor:pointer}
+    .muted{color:var(--muted);font-size:13px}
+
+    ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+    li.item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:var(--glass)}
+    li .left{display:flex;align-items:center;gap:10px;flex:1}
+    .task-text{font-size:15px}
+    .completed .task-text{opacity:0.6;text-decoration:line-through}
+
+    .small-btn{background:transparent;border:0;padding:6px;border-radius:8px;cursor:pointer;color:var(--muted)}
+    .small-btn:hover{color:white}
+
+    .actions{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+
+    footer{margin-top:14px;text-align:center;color:var(--muted);font-size:13px}
+
+    /* responsive */
+    @media (max-width:520px){.wrap{padding:12px;margin:20px}.tabs{gap:6px}.tab-btn{padding:8px 10px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Meu Painel</h1>
+      <div class="tabs" role="tablist" aria-label="Navegação principal">
+        <button class="tab-btn" role="tab" data-tab="tarefas" aria-selected="true">Tarefas</button>
+        <button class="tab-btn" role="tab" data-tab="treinos" aria-selected="false">Treinos</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- TAREFAS -->
+      <section id="tarefas" class="tab-panel" data-active="true">
+        <form id="task-form">
+          <input id="task-input" type="text" placeholder="Adicionar nova tarefa e pressione Enter" aria-label="Adicionar tarefa">
+          <button type="submit">Adicionar</button>
+        </form>
+
+        <div class="actions">
+          <button id="clear-completed" class="small-btn">Limpar concluídas</button>
+          <span class="muted">(Tudo é salvo no seu navegador)</span>
+        </div>
+
+        <ul id="tasks-list" aria-live="polite"></ul>
+      </section>
+
+      <!-- TREINOS -->
+      <section id="treinos" class="tab-panel" data-active="false">
+        <form id="workout-form">
+          <input id="workout-input" type="text" placeholder="Adicionar novo treino (ex: 20 flexões)" aria-label="Adicionar treino">
+          <button type="submit">Adicionar</button>
+        </form>
+
+        <ul id="workouts-list" aria-live="polite"></ul>
+      </section>
+    </main>
+
+    <footer>
+      <small>SPA simples — localStorage • navegação por hash • acessível</small>
+    </footer>
+  </div>
+
+  <script>
+    // --- Estado da aplicação ---
+    const STORAGE_KEY = 'spa_state_v1'
+    const TABS = ['tarefas','treinos']
+
+    const state = {
+      activeTab: 'tarefas',
+      tasks: [],
+      workouts: []
+    }
+
+    // Utilidades
+    const $ = selector => document.querySelector(selector)
+    const generateId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6)
+
+    // --- Persistência ---
+    function saveState(){
+      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) } catch(e){ console.warn('Não foi possível salvar:', e) }
+    }
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if(raw){
+          const parsed = JSON.parse(raw)
+          Object.assign(state, parsed)
+        }
+      }catch(e){console.warn('Erro ao carregar estado:', e)}
+
+      // defaults se estiver vazio
+      if(!state.tasks.length){
+        state.tasks = [
+          {id:generateId(),text:'Estudar programação (30 min)',done:false},
+          {id:generateId(),text:'Ler 10 páginas',done:false}
+        ]
+      }
+      if(!state.workouts.length){
+        state.workouts = [
+          {id:generateId(),name:'20 flexões'},
+          {id:generateId(),name:'30 agachamentos'}
+        ]
+      }
+
+      // ativa aba via hash (se existir) ou via estado salvo
+      const h = (location.hash || '').replace('#','')
+      if(TABS.includes(h)) state.activeTab = h
+      if(state.activeTab && TABS.includes(state.activeTab)) location.hash = state.activeTab
+    }
+
+    // --- Renderização ---
+    function renderTabs(){
+      document.querySelectorAll('[role="tab"]').forEach(btn => {
+        const tab = btn.dataset.tab
+        const isActive = tab === state.activeTab
+        btn.setAttribute('aria-selected', String(isActive))
+      })
+      document.querySelectorAll('.tab-panel').forEach(p => p.dataset.active = p.id === state.activeTab)
+    }
+
+    function renderTasks(){
+      const list = $('#tasks-list')
+      list.innerHTML = state.tasks.map(t => `
+        <li class="item ${t.done? 'completed':''}" data-id="${t.id}">
+          <div class="left">
+            <input class="task-checkbox" type="checkbox" ${t.done?'checked':''} aria-label="Marcar tarefa">
+            <div class="task-text">${escapeHtml(t.text)}</div>
+          </div>
+          <div>
+            <button class="small-btn edit-btn" title="Editar">✎</button>
+            <button class="small-btn delete-btn" title="Remover">✕</button>
+          </div>
+        </li>
+      `).join('')
+    }
+
+    function renderWorkouts(){
+      const list = $('#workouts-list')
+      list.innerHTML = state.workouts.map(w => `
+        <li class="item" data-id="${w.id}">
+          <div class="left">
+            <div class="task-text">${escapeHtml(w.name)}</div>
+          </div>
+          <div>
+            <button class="small-btn delete-w" title="Remover">✕</button>
+          </div>
+        </li>
+      `).join('')
+    }
+
+    // --- Helpers ---
+    function escapeHtml(str){
+      return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c])
+    }
+
+    // --- Ações ---
+    function addTask(text){
+      state.tasks.unshift({id:generateId(),text,done:false})
+      saveState(); renderTasks()
+    }
+    function toggleTask(id){
+      const t = state.tasks.find(x=>x.id===id); if(!t) return; t.done = !t.done; saveState(); renderTasks()
+    }
+    function deleteTask(id){ state.tasks = state.tasks.filter(x=> x.id !== id); saveState(); renderTasks() }
+    function editTask(id){
+      const t = state.tasks.find(x=>x.id===id); if(!t) return;
+      const novo = prompt('Editar tarefa', t.text)
+      if(novo!=null){ t.text = novo.trim() || t.text; saveState(); renderTasks() }
+    }
+    function clearCompleted(){ state.tasks = state.tasks.filter(x=>!x.done); saveState(); renderTasks() }
+
+    function addWorkout(name){ state.workouts.unshift({id:generateId(),name}); saveState(); renderWorkouts() }
+    function deleteWorkout(id){ state.workouts = state.workouts.filter(x=>x.id!==id); saveState(); renderWorkouts() }
+
+    // --- Tab control ---
+    function setActiveTab(tab){
+      if(!TABS.includes(tab)) return
+      state.activeTab = tab
+      renderTabs()
+      saveState()
+      if(location.hash !== '#'+tab) history.pushState(null,'', '#'+tab)
+    }
+
+    // --- Eventos ---
+    function bindEvents(){
+      // tabs
+      document.querySelectorAll('[role="tab"]').forEach(btn => btn.addEventListener('click', ()=> setActiveTab(btn.dataset.tab)))
+
+      // hash back/forward
+      window.addEventListener('hashchange', ()=>{
+        const h = (location.hash || '').replace('#','')
+        if(TABS.includes(h)) { state.activeTab = h; renderTabs() }
+      })
+
+      // tarefas: add
+      $('#task-form').addEventListener('submit', e => {
+        e.preventDefault()
+        const val = $('#task-input').value.trim()
+        if(!val) return
+        addTask(val)
+        $('#task-input').value = ''
+        $('#task-input').focus()
+      })
+
+      // tarefas: delegação para marcar, deletar, editar
+      $('#tasks-list').addEventListener('click', e => {
+        const li = e.target.closest('li.item')
+        if(!li) return
+        const id = li.dataset.id
+        if(e.target.matches('.task-checkbox')){ toggleTask(id); return }
+        if(e.target.matches('.delete-btn')){ if(confirm('Remover tarefa?')) deleteTask(id); return }
+        if(e.target.matches('.edit-btn')){ editTask(id); return }
+      })
+
+      // limpar concluídas
+      $('#clear-completed').addEventListener('click', ()=> { if(confirm('Remover todas as tarefas concluídas?')) clearCompleted() })
+
+      // treinos: add
+      $('#workout-form').addEventListener('submit', e =>{
+        e.preventDefault(); const v = $('#workout-input').value.trim(); if(!v) return; addWorkout(v); $('#workout-input').value=''; $('#workout-input').focus()
+      })
+
+      // treinos: delegação
+      $('#workouts-list').addEventListener('click', e =>{
+        const li = e.target.closest('li.item'); if(!li) return; const id = li.dataset.id
+        if(e.target.matches('.delete-w')){ if(confirm('Remover treino?')) deleteWorkout(id) }
+      })
+
+      // atalhos simples: 1 e 2 para trocar de aba
+      window.addEventListener('keydown', e =>{
+        if(e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return
+        if(e.key === '1') setActiveTab('tarefas')
+        if(e.key === '2') setActiveTab('treinos')
+      })
+    }
+
+    // --- Inicialização ---
+    function init(){
+      loadState()
+      renderTabs(); renderTasks(); renderWorkouts(); bindEvents()
+    }
+
+    document.addEventListener('DOMContentLoaded', init)
+  </script>
+</body>
+</html>

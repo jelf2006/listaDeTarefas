@@ -1,0 +1,126 @@
+body {  
+    text-align: center;
+    font-family: Arial, sans-serif;
+    background-color: #0D1117;
+    color: #E6EDF3;
+    -ms-overflow-style: none;
+}
+
+* {
+    padding: 0;
+    margin: 0;
+}
+
+main {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    padding: 20px;
+}
+
+#title {
+    background-color: #161B22;
+    color: #1F6FEB;
+    font-size: 40px;
+    padding: 20px 0;
+    border-bottom: 2px solid #1F6FEB;
+}
+
+.checkbox {
+    display: flex;
+    margin: 6px 0;
+    gap: 8px;
+    align-items: center;
+}
+
+.semana{
+    border: 1px solid #1F6FEB;
+    border-radius: 10px;
+    padding: 10px;
+    width: 230px;
+    background: #f9f9f9;
+    display: inline-block;
+    background-color: #161B22;
+    margin: 10px;
+}
+
+.checkbox input[type="text"] {
+    background-color: #0D1117;
+    flex: 1;
+    padding: 4px;
+    border: 1px solid #8B949E;
+    color: #E6EDF3;
+    border-radius: 4px;
+    margin: 4px 8px;
+}
+
+p {
+    font-weight: bold;
+    color: #8B949E; 
+}
+
+input[type="checkbox"] {
+    appearance: none; 
+    flex: 1;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #1F6FEB;
+    border-radius: 4px;
+    background-color: #0D1117;
+    cursor: pointer;
+    position: relative;
+}
+
+input[type="checkbox"]:checked {
+    background-color: #1F6FEB; 
+}
+
+input[type="checkbox"]:checked::after {
+    content: "✔";
+    color: white;
+    font-size: 14px;
+    position: absolute;
+    top: 0;
+    left: 3px;
+}
+::-webkit-scrollbar {
+    display: none;
+}
+html {
+    scrollbar-width: none; /* esconde */
+}
+#menu {
+    position: fixed;
+    justify-content: center;
+    width: 100%;
+    height: 60px;
+    background: #0D1117;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: top 0.3s ease;
+    top: -60px;
+}
+#top-area {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 40px;
+  background: transparent;
+  z-index: 100;
+}
+#top-area:hover + #menu,
+#menu:hover {
+  top: 0;
+}
+#menu button {
+  background: #1F6FEB;
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+}
